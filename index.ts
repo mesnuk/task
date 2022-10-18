@@ -5,6 +5,7 @@ const fieldCanvas = <HTMLCanvasElement>document.getElementById('fieldTask'),
       rect = fieldCanvas.getBoundingClientRect();
 const attributeName = "data-check";
 let coords:Array<Coord> = [];
+let isClearing : boolean = false;
 
 fieldCanvas.width = window.innerWidth / 2;
 fieldCanvas.height = window.innerHeight / 2;
@@ -15,12 +16,12 @@ const isIncludes = (start: number, end: number, number: number) : boolean=> {
     const min = Math.min.apply(Math, [start, end]),
         max = Math.max.apply(Math, [start, end]);
     return number > min && number < max;
-};
+}
 
 const drawRedDot = (x : number, y : number) : void => {
     ctx.beginPath();
     ctx.arc(x, y, 4, 0, Math.PI * 2, true);
-    ctx.lineWidth = 0;
+    ctx.lineWidth = 1;
     ctx.fillStyle = "red";
     ctx.fill();
     ctx.closePath();
@@ -72,20 +73,26 @@ const redraw :Function = (coords : Array<Coord>) => {
     markIntersection(coords);
 }
 const handleFollowing : Function = (event : MouseEvent, coords : Array<Coord>, coordinateX: number, coordinateY: number) : void  => {
+
     if (fieldCanvas.hasAttribute(attributeName)) {
-        ctx.beginPath();
         ctx.clearRect(0,0, fieldCanvas.width, fieldCanvas.height);
+        ctx.beginPath();
         ctx.moveTo(coordinateX, coordinateY);
         ctx.lineTo(event.clientX - rect.left, event.clientY - rect.top);
         ctx.stroke();
-        markIntersection(coords, [coords[coords.length-1], [event.clientX - rect.left, event.clientY- rect.top]]);
         ctx.closePath();
+
+        redraw(coords);
+        markIntersection(coords, [coords[coords.length-1], [event.clientX - rect.left, event.clientY- rect.top]]);
     }
-    redraw(coords);
 }
 
 
 const handleDraw : Function = (event : MouseEvent):void => {
+    if(isClearing){
+        return;
+    }
+
     const coordinateX:number = event.clientX - rect.left,
           coordinateY:number = event.clientY - rect.top;
     coords.push([coordinateX, coordinateY]);
@@ -102,6 +109,7 @@ const handleCancel :Function = (event: MouseEvent):void => {
     if(fieldCanvas.hasAttribute(attributeName)) {
         ctx.clearRect(0,0, fieldCanvas.width, fieldCanvas.height);
         coords.pop();
+        redraw(coords);
         fieldCanvas.removeAttribute(attributeName);
     }
 }
@@ -109,9 +117,11 @@ const handleCancel :Function = (event: MouseEvent):void => {
 const handleClearField : Function = (event: MouseEvent) : void => {
     let xTop:number = 0, yTop:number = 0;
     let xDown = fieldCanvas.width, yDown = fieldCanvas.height;
-
+    isClearing = true;
+    handleCancel(event);
     const int = setInterval(() => {
         if(xTop > fieldCanvas.width / 4  && yTop > fieldCanvas.height / 4 ){
+            isClearing = false;
             ctx.fillStyle = 'white';
             ctx.fillRect(0,0,fieldCanvas.width, fieldCanvas.height);
             coords = [];
